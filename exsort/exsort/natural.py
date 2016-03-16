@@ -1,17 +1,16 @@
 import exsort.exsortio as io
 
 def prep_runs(src, o1, o2):
-    prev = io.EOR
-    c1, c2 = 0, 0
+    prev = None
+    c1, c2 = 0, 0 # number of items written to o_i
     inv = False
     while True:
         v = src.next()
-        if   io.is_sentinel(v): break
-        elif io.is_sentinel(prev) or prev <= v:
+        if   v == io.EOF: break
+        elif prev is None or prev <= v:
             o1.push(v)
             c1 += 1
         else:
-            o1.push(io.EOR)
             o2.push(v)
             c2 += 1
             o1, o2 = o2, o1
@@ -20,19 +19,28 @@ def prep_runs(src, o1, o2):
         prev = v
     return (c2, c1) if inv else (c1, c2)
 def merge(t1, t2, o):
+    p1, p2     = None, None   # 'p' for 'previous'
+    exh1, exh2 = False, False # 'exh' means 'exhausted run'
     while True:
         v1, v2 = t1.peek(), t2.peek()
         if v1 == io.EOF and v2 == io.EOF:
             break
-        elif io.is_sentinel(v1) and io.is_sentinel(v2):
-            t1.next()
-            t2.next()
-        elif io.is_sentinel(v1): o.push(t2.next())
-        elif io.is_sentinel(v2): o.push(t1.next())
-        elif v1 <= v2: o.push(t1.next())
-        else:
-#            assert v1 > v2
+        exh1 = v1 == io.EOF or (p1 and p1 > v1)
+        exh2 = v2 == io.EOF or (p2 and p2 > v2)
+        if exh1 and exh2:
+            p1, p2 = v1, v2
+        elif exh1:
             o.push(t2.next())
+            p2 = v2
+        elif exh2:
+            o.push(t1.next())
+            p1 = v1
+        elif v1 <= v2:
+            o.push(t1.next())
+            p1 = v1
+        else:      
+            o.push(t2.next())
+            p2 = v2
 def sort(src, dst,  openread, openwrite):
     def reopenwrite(f, fname=None):
         fname = fname or f.fname

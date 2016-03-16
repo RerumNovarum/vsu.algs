@@ -1,5 +1,6 @@
 import argparse
 import exsort.natural  as natural
+import exsort.multiway as multiway
 import exsort.exsortio as io
 from functools import total_ordering
 
@@ -20,7 +21,7 @@ File format:
 class Student:
     def __init__(self, rawline):
         input = rawline.split(' ')
-        # print('splitted: %s'%input)
+        # print('raw student: %s'%input)
         name, score = input
         self.name, self.score = name, int(score)
     def __eq__(self, that):
@@ -30,8 +31,8 @@ class Student:
     def __str__(self):
         return self.name + ' ' + str(self.score)
     def __repr__(self): return "'" + self.__str__() + "'"
+
 class StudentReader(io.InputStream):
-    cache   = io.EOF
     def __init__(self, filename):
         self.fname = filename
         self.f = open(filename, mode='r', encoding='utf8')
@@ -41,9 +42,6 @@ class StudentReader(io.InputStream):
         s = self.f.readline()
         self.cache = s if io.is_sentinel(s) else Student(s)
         return self.cache
-    def next(self):
-        s, self.cache = self.peek(), io.EOF
-        return s
     def close(self): self.f.close()
     def __enter__(self): pass
     def __exit__(self): self.close()
@@ -64,7 +62,8 @@ class StudentWriter:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--in', dest='infile')
-    parser.add_argument('-o', '--out', dest='outfile')
+    parser.add_argument('-i', '--in', dest='infile', required=True)
+    parser.add_argument('-o', '--out', dest='outfile', required=True)
+    parser.add_argument('-n', dest='n', default=4, type=int)
     args   = parser.parse_args()
-    natural.sort(args.infile, args.outfile, StudentReader, StudentWriter)
+    multiway.sort(args.infile, args.outfile, args.n, StudentReader, StudentWriter)
