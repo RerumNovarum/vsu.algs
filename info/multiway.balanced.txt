@@ -1,0 +1,165 @@
+//////////////////////////////////////////////////////////////////////////////
+//
+//  File sort (balanced merge)
+//  (c) Johna Smith, 1996
+//
+//  Method description:
+//   This program reads data from file 1.dat and writes sorted data to 1.srt
+//   Format of 1.dat: i1 i2 i3 i4 i5 i6 ..., where i(k) is integer
+//   It also creates four temporary files: 1.tmp, 2.tmp, 3.tmp
+//   We use N files to sort given sequence of data.
+//
+//   Series - is a sequence of numbers with the following property: a(i)<=a(i+1)
+//   1) Divide copy of the given file C into N files, writing first
+//      series from C to F1, second one to F2, third - to F3, and so on
+//   2) Combine files F1,F2,F3,...,Fn, sorting distributed series
+//   3) Repeat first two steps until there is more than one series
+//
+//////////////////////////////////////////////////////////////////////////////
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+ 
+#define N   10  // number of temporary files (must be even and greater than 2)
+#define Nh  N/2 // must be an integer
+ 
+struct ExtFile
+{
+  FILE *F;
+  int first; // current element of this file
+  char eor; // indicates end of series
+};
+ 
+// this function copies data element from x to y, updating (.first) members
+void copy(ExtFile *x, ExtFile *y)
+{
+  y->first=x->first;
+  fwrite(&y->first,sizeof(int),1,y->F);
+  fread(&x->first,sizeof(int),1,x->F);
+  x->eor=x->first<y->first;
+}
+ 
+void main(void)
+{
+  FILE *input,*output;
+  ExtFile F[N];
+  int l,old,j,mx,tx,min,x,t[N],ta[N],k1,k2;
+  char name[13];
+ 
+  // opening needed files (file1.dat must exist)
+  input=fopen("1.dat","rb");
+  output=fopen("1.srt","wb");
+  for (int i=0;i<N;i++)
+  {
+    gcvt(i,8,name);
+    strcat(name,".tmp");
+    F[i].F=fopen(name,"w+b");
+    F[i].eor=0;
+  }
+ 
+  // distributing given data
+  j=Nh;
+  l=0;
+  fscanf(input,"%d ",&x);
+  while (!feof(input))
+  {
+    if (j<Nh-1) j++; else j=0;
+    do
+    {
+      old=x;
+      fwrite(&x,sizeof(int),1,F[j].F);
+      fscanf(input,"%d ",&x);
+    } while (!feof(input) && x>=old);
+    l++;
+  }
+  if (x<old)
+  {
+    if (j<Nh-1) j++; else j=0;
+    l++;
+  }
+  fwrite(&x,sizeof(int),1,F[j].F);
+ 
+  for (i=0;i<N;i++) t[i]=i;
+ 
+  do
+  {
+    // merging t[0]..t[Nh-1] to t[Nh]..t[N-1]
+    if(l<Nh) k1=l-1; else k1=Nh-1;
+    for(i=0;i<=k1;i++)
+    {
+      rewind(F[t[i]].F);
+      ta[i]=t[i];
+      fread(&F[t[i]].first,sizeof(int),1,F[t[i]].F);
+    }
+    l=0; // number of input series
+    j=Nh; // index of input sequence
+    // merging input series to t[j]
+    do
+    {
+      l++;
+      k2=k1;
+      // selecting minimal element from F1..Fn
+      do
+      {
+        i=1;
+        mx=0;
+        min=F[ta[0]].first;
+        while (i<=k2)
+        {
+          x=F[ta[i]].first;
+          if(x<min)
+          {
+            min=x;
+            mx=i;
+          }
+          i++;
+        }
+        copy(&F[ta[mx]],&F[t[j]]);
+        if (feof(F[ta[mx]].F))
+        {
+          // excluding file
+          fclose(F[ta[mx]].F);
+          gcvt(ta[mx],8,name);
+          strcat(name,".tmp");
+          F[ta[mx]].F=fopen(name,"w+b");
+          F[ta[mx]].eor=0;
+          ta[mx]=ta[k2];
+          ta[k2]=ta[k1];
+          k1--;
+          k2--;
+        } else
+        if (F[ta[mx]].eor)
+        {
+          // closing series
+          tx=ta[mx];
+          ta[mx]=ta[k2];
+          ta[k2]=tx;
+          k2--;
+        }
+      } while(k2>=0);
+      if(j<N-1) j++; else j=Nh;
+    } while(k1>=0);
+    for(i=0;i<Nh;i++)
+    {
+      tx=t[i];
+      t[i]=t[i+Nh];
+      t[i+Nh]=tx;
+    }
+  } while (l!=1);
+ 
+  // writing sorted sequence
+  rewind(F[0].F);
+  fread(&x,sizeof(int),1,F[0].F);
+  while (!feof(F[0].F))
+  {
+    fprintf(output,"%d ",x);
+    fread(&x,sizeof(int),1,F[0].F);
+  }
+ 
+  // closing all opened files
+  for (i=0;i<N;i++) fclose(F[i].F);
+  fclose(input);
+  fclose(output);
+ 
+}
