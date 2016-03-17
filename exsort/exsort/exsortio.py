@@ -30,8 +30,8 @@ returns current object but doesn't advance position
         raise NotImplemented()
     def __lt__(self, that):
         v1, v2 = self.peek(), that.peek()
-        if v1 == EOF or self.eor(): return False
-        if v2 == EOF or that.eor(): return True
+        if v1 == EOF: return False
+        if v2 == EOF: return True
         return v1 < v2
     def eor(self):
         p, v = self.prev, self.peek()
@@ -41,8 +41,9 @@ returns current object but doesn't advance position
         return eor
     def eof(self):
         return is_sentinel(self.peek())
-    def next_run(self):
-        self.prev = self.peek()
+    def __str__(self):
+        return ' v="%s" '%(self.peek())
+    def __repr__(self): return "'%s'"%str(self)
 
 class OutputStream:
     def __init__(self, name):
