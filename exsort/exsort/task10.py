@@ -24,11 +24,14 @@ class Student:
         # print('raw student: %s'%input)
         name, score = input
         self.name, self.score = name, int(score)
+        self.__strcache__ = None
+        self.__strcache__ = self.__str__()
     def __eq__(self, that):
         return type(that) == Student and self.score == that.score
     def __lt__(self, that):
         return self.score < that.score
     def __str__(self):
+        if self.__strcache__: return self.__strcache__
         return self.name + ' ' + str(self.score)
     def __repr__(self): return "'" + self.__str__() + "'"
 
@@ -53,7 +56,7 @@ class StudentWriter:
         # print('val: %s'%repr(val))
         self.f.write(str(val))
         self.f.write('\n')
-        self.f.flush() # perhaps it's better to buffer than to flush each time?
+        # self.f.flush() # perhaps it's better to buffer than to flush each time?
     def close(self):
         self.f.flush()
         self.f.close()
@@ -66,4 +69,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--out', dest='outfile', required=True)
     parser.add_argument('-n', dest='n', default=4, type=int)
     args   = parser.parse_args()
-    multiway.sort(args.infile, args.outfile, args.n, StudentReader, StudentWriter)
+    # multiway.sort(args.infile, args.outfile, args.n, StudentReader, StudentWriter)
+    natural.sort(args.infile, args.outfile, StudentReader, StudentWriter)
+

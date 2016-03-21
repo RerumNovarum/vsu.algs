@@ -18,8 +18,8 @@ def wrap_sorting(tmp_no):
     return sort
 class MultiwayTest(unittest.TestCase):
     def test_random(self):
-        for tmp_no_deg in range(1, 4):
-            for i in range(8, 16):
+        for tmp_no_deg in range(2, 4):
+            for i in range(12, 16):
                 in_size = 2**i
                 tmp_no  = 2**tmp_no_deg
                 print('[I] multiway sort on random input started;'\

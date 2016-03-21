@@ -2,39 +2,38 @@ import exsort.exsortio as io
 import heapq
 
 class Ring:
-    def __init__(self, streams):
+    def __init__(self, streams, buffsize=None):
         self.streams = streams
         self.i = 0
         self.runs_no = 1
+        self.buff = []
+        self.buffsize = buffsize
     def index(self, j):
         return (self.i+j)%len(self.streams)
     def new_run(self):
-        self.i = (self.i + 1)%len(self.streams)
-        self.runs_no += 1
+        if len(self.buff) < self.buffsize:
+            self.flush()
+            self.i = (self.i + 1)%len(self.streams)
+            self.runs_no += 1
     def write(self, v):
-        self.streams[self.i].push(v)
+        heapq.heappush(self.buff, v)
+        if len(self.buff) == self.buffsize:
+            self.flush()
     def peek(self):
         return self.streams[self.i].peek()
     def read(self):
         return self.streams[self.i].next()
-# def prep_runs(inputs, outputs):
-#     runs = Ring(outputs)
-#     p = None
-#     while True:
-#         v = input.peek()
-#         if v == io.EOF: break
-#         eor = p and p>v
-#         if eor:
-#             runs.new_run()
-#         else:
-#             runs.write(input.next())
-#         p = v
-#     return runs.runs_no
+    def flush(self):
+        buff = self.buff
+        o = self.streams[self.i]
+        while buff:
+            v = heapq.heappop(buff)
+            o.push(v)
 
-def merge(inputs, outputs):
+def merge(inputs, outputs, buffsize):
     ins = [i for i in inputs]
     next = []
-    outs = Ring(outputs)
+    outs = Ring(outputs, buffsize)
     heapq.heapify(ins)
     last = None
     while ins or next:
@@ -50,15 +49,16 @@ def merge(inputs, outputs):
             last = v
             outs.write(input.next())
             heapq.heappush(ins, input)
+    outs.flush()
     return outs.runs_no
-def sort(src, dst, n, openread, openwrite):
+def sort(src, dst, n, openread, openwrite, buffsize=1024):
     s = openread(src)
     in_names = [io.mktemp() for i in range(n)]
     out_names = [io.mktemp() for i in range(n)]
     ins = [s]
     outs = [openwrite(f) for f in out_names]
     while True:
-        c = merge(ins, outs)
+        c = merge(ins, outs, buffsize)
         for f in ins: f.close()
         for f in outs: f.close()
         in_names, out_names = out_names, in_names
@@ -66,7 +66,7 @@ def sort(src, dst, n, openread, openwrite):
         if c == 1: break
         outs = [openwrite(f) for f in out_names]
     out = openwrite(dst)
-    merge(ins, [out])
+    merge(ins, [out], buffsize=1)
     out.close()
     for f in ins: f.close()
     for f in in_names + out_names: io.rm(f)
