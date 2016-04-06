@@ -2,20 +2,20 @@
 #include <map>
 
 template<typename V>
-class Trie {
+class trie_dict {
   private:
-    std::map<char, Trie<V>*> next;
+    std::map<char, trie_dict<V>*> next;
     bool word;
     V v;
 
-    Trie<V>* find(std::string &key) {
+    trie_dict<V>* find(std::string &key) {
       auto t = this;
       int i = 0;
       int end = key.size();
       while (t != nullptr && i != end) {
         auto it = t->next.find(key[i]);
         if (it == t->next.end()) break;
-        t = *it;
+        t = it->second;
         i += 1;
       }
       if (i == end) return t;
@@ -40,7 +40,7 @@ class Trie {
       int end = key.size();
       while(i != end) {
         char c = key[i];
-        if (t->next.find(c) == t->next.end()) t->next[c] = new Trie<V>();
+        if (t->next.find(c) == t->next.end()) t->next[c] = new trie_dict<V>();
         t = t->next[c];
         i += 1;
       }
