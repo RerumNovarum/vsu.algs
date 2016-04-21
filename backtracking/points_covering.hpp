@@ -46,6 +46,14 @@ struct pt {
   bool operator== (const pt<T> &p) const {
     return this->x == p.x && this->y == p.y;
   }
+  bool operator!= (const pt<T> &p) const {
+    return this->x != p.x || this->y != p.y;
+  }
+  bool operator<(const pt<T> &p) const {
+    if (this == nullptr) return false;
+    if (this->x != p.x) return this->x < p.x;
+    return this->y < p.y;
+  }
 };
 
 template<typename T>
@@ -103,8 +111,8 @@ struct ln {
   pt<T> a, b;
   ln() : a(0, 0), b(0, 0) {}
   ln(pt<T> p_1, pt<T> p_2) :
-    a(p_1),
-    b(p_2)
+    a(min(p_1, p_2)),
+    b(max(p_1, p_2))
   {}
   bool operator< (const ln<T> &other) const {
     if (this==nullptr) return false;
@@ -136,7 +144,7 @@ struct ln {
 // time: \Theta(n*(n*log(n) + 2*n))
 // space: O(n)
 template<typename T>
-set< ln<T> > min_cover_next(const vector<pt<T> >& in_pts) {
+set<ln<T> > min_cover_next(const vector<pt<T> >& in_pts) {
   vector<pt<T> > pts(in_pts.size());
   copy(in_pts.begin(), in_pts.end(), pts.begin());
   set<ln<T> > lines;
@@ -166,10 +174,28 @@ set< ln<T> > min_cover_next(const vector<pt<T> >& in_pts) {
   return lines;
 }
 
+template<typename T>
+vector<ln<T> >* min_cover(const vector<pt<T> > &in_pts) {
+  vector<pt<T> > uniq; 
+  {
+    vector<pt<T> > aux(in_pts);
+    sort(aux.begin(), aux.end());
+    int uniq_no = 0;
+    for (auto it = aux.begin() + 1; it != aux.end(); ++it)
+      if (*it != *(it-1))
+        ++uniq_no;
+    uniq.reserve(uniq_no);
+    for (auto it = aux.begin() + 1; it != aux.end(); ++it)
+      if (*it != *(it-1))
+        uniq.push_back(*it);
+  }
+  return _min_cover(uniq);
+}
+
 // finds minimal line-covering of in_pts
 // algorithm: bruteforce with a few cut-offs
 template<typename T>
-vector< ln<T> >* min_cover(const vector< pt<T> > &in_pts) {
+vector<ln<T> >* _min_cover(const vector<pt<T> > &in_pts) {
   vector<ln<T> >* covering = nullptr;
   // boundary cases
   if (in_pts.size() <= 2) {
@@ -189,7 +215,7 @@ vector< ln<T> >* min_cover(const vector< pt<T> > &in_pts) {
   ln<T> cur;
   int n = in_pts.size();
   int inf = n+1;
-  set< ln<T> > lines = min_cover_next(in_pts);
+  set<ln<T> > lines = min_cover_next(in_pts);
   if (lines.size() >= n/2) {
     // i.e. there's no collinear points
     // so it doesn't matter
@@ -201,12 +227,17 @@ vector< ln<T> >* min_cover(const vector< pt<T> > &in_pts) {
   }
   for (auto it = lines.begin(); it != lines.end(); ++it) {
     ln<T> l = *it;
-    vector<pt<T> > pts;
+    int remaining = 0;
+    for (auto p = in_pts.begin(); p != in_pts.end(); ++p) {
+      if (!collinear(l.a, l.b, *p))
+        ++remaining;
+    }
+    vector<pt<T> > pts; pts.reserve(remaining + 1);
     for (auto p = in_pts.begin(); p != in_pts.end(); ++p) {
       if (!collinear(l.a, l.b, *p))
         pts.push_back(*p);
     }
-    vector< ln<T> > *opt = min_cover(pts);
+    vector<ln<T> > *opt = _min_cover(pts);
     if (opt->size() < inf) {
       if (covering != nullptr) delete covering;
       covering = opt;

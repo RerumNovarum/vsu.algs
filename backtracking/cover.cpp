@@ -15,7 +15,7 @@ void read_pts(vector< pt<T> > &pts, istream &in) {
 }
 
 int main(int argc, char *argv[]) {
-  vector< pt<int> > pts;
+  vector<pt<int> > pts;
   if (argc == 1) read_pts(pts, cin);
   else {
     for (int i = 0; i < argc; ++i) {
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  vector< ln<int> > *covering = min_cover(pts);
+  vector<ln<int> > *covering = min_cover(pts);
   for (auto it = covering->begin(); it != covering->end(); ++it) {
     cout << *it << endl;
   }
