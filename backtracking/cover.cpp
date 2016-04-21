@@ -29,10 +29,8 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  vector< ln<int> > covering = min_cover(pts);
-  for (auto it = covering.begin(); it != covering.end(); ++it) {
-    // cout << it->a << "; " << it->b << endl;
-    cout << it->a.x << " " << it->a.y\
-         << "; " << it->b.x << " " << it->b.y << endl;
+  vector< ln<int> > *covering = min_cover(pts);
+  for (auto it = covering->begin(); it != covering->end(); ++it) {
+    cout << *it << endl;
   }
 }

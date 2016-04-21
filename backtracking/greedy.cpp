@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <set>
 
 #include "points_covering.hpp"
 
@@ -29,7 +30,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  vector< ln<int> > opts = min_cover_next(pts);
+  set< ln<int> > opts = min_cover_next(pts);
   for (auto it = opts.begin(); it != opts.end(); ++it) {
     // cout << it->a << "; " << it->b << endl;
     cout << it->a.x << " " << it->a.y\
