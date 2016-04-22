@@ -50,7 +50,6 @@ struct pt {
     return this->x != p.x || this->y != p.y;
   }
   bool operator<(const pt<T> &p) const {
-    if (this == nullptr) return false;
     if (this->x != p.x) return this->x < p.x;
     return this->y < p.y;
   }
@@ -84,19 +83,7 @@ struct pt_polar_lt {
   pt<T> origin;
   pt_polar_lt(pt<T> o) : origin(o) {}
   
-  bool lt(const pt<T>& a, const pt<T>& b) const {
-    if (a == origin) return true;
-    if (b == origin) return false;
-    T v = sig_vol(a - origin, b - origin);
-    if (v != 0) return v > 0;
-    if (a.x != b.x) return a.x < b.x;
-    return a.y < b.y;
-  }
   bool operator()(const pt<T>& a, const pt<T>& b) const {
-    bool l = this->lt(a, b);
-    // cout << a << (l ? "<" : ">") << b << endl;
-    return l;
-
     if (a == origin) return true;
     if (b == origin) return false;
     T v = sig_vol(a - origin, b - origin);
@@ -115,7 +102,6 @@ struct ln {
     b(max(p_1, p_2))
   {}
   bool operator< (const ln<T> &other) const {
-    if (this==nullptr) return false;
     if (this->a.x != other.a.x)
       return this->a.x < other.a.x;
     if (this->b.x != other.b.x)
@@ -152,13 +138,10 @@ set<ln<T> > min_cover_next(const vector<pt<T> >& in_pts) {
   int sup = 0;
   for (auto it = in_pts.begin(); it != in_pts.end(); ++it) {
     pt_polar_lt<T> lt(*it);
-    // cout << "pv=" << *it << endl;
-    // for_each(pts.begin(), pts.end(), [](pt<T> p){ cout << p << endl; });
     std::sort(pts.begin(), pts.end(), lt);
     int i=0, j=0;
     while (i < n) {
       j = i + 1;
-      // cout << "j=" << j << endl;
       while (j < n && collinear(pts[i], pts[j-1], pts[j])) ++j;
       --j;
       if (j - i + 1 >= sup) {
