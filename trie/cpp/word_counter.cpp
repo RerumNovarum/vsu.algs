@@ -6,13 +6,13 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
-  trie_dict<int> t;
+  trie_dict<string, int> t;
   {
     ifstream f(argv[1]);
     if (f.is_open()) {
       string word;
       while (f >> word) {
-        if (t.has_key(word))
+        if (t.has(word))
           t[word]++;
         else
           t[word] = 1;
@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
   {
     string word;
     while (cin >> word) {
-      if (t.has_key(word)) cout << t[word] << endl;
+      if (t.has(word)) cout << t[word] << endl;
       else cout << 0 << endl;
     }
   }

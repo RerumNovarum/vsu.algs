@@ -4,137 +4,145 @@
 #include <stdexcept>
 #include <cassert>
 #include <map>
-#include <stack>
 
-template <typename V>
-class _Trie_dict_iterator;
+#define TRIE_DEC \
+  template< \
+    typename K = std::string, \
+    typename V = null_type>
 
-template <typename V>
-struct trie_dict_node {
-  std::map<char, trie_dict_node<V>*> next;
+struct null_type {};
+
+TRIE_DEC
+struct _trie_dict_node {
+  typedef std::iterator_traits<typename K::iterator> atraits;
+  typedef typename atraits::value_type char_type;
+  typedef _trie_dict_node<K,V>*     node_ptr;
+
+  std::map<char_type, node_ptr> next;
+  node_ptr prev;
   bool word;
   V v;
+
+  _trie_dict_node() : prev(nullptr), word(false) {}
+  _trie_dict_node(node_ptr previous, bool is_word = false) :
+    word(is_word),
+    prev(previous) {}
 };
 
-template <typename V>
+TRIE_DEC
 class trie_dict {
-  typedef _Trie_dict_iterator<V> iterator;
-  typedef trie_dict_node<V> _Node;
-  friend class _Trie_dict_iterator<V>;
+  public:
+    typedef std::iterator_traits<typename K::iterator> atraits;
+    typedef typename atraits::value_type char_type;
+    typedef typename K::iterator   char_iterator;
+    typedef typename K::const_iterator char_const_iterator;
+
+    typedef V& val_ref;
+    typedef const val_ref val_const_ref;
+    typedef K& key_ref;
+    typedef const key_ref key_const_ref;
+
+    typedef _trie_dict_node<K,V> node;
+    typedef node*                node_ptr;
+    
+    int size();
+    bool has(key_const_ref k);
+    void put(key_const_ref k, V v);
+    val_ref at(key_const_ref k);
+
+    val_const_ref operator[](key_const_ref k) const;
+    val_ref       operator[](key_const_ref k);
 
   private:
-    _Node head;
-    static iterator _end_iterator;
+    int count;
+    node_ptr root = nullptr;
 
-    trie_dict<V>* find(std::string &key) {
-      auto t = head;
-      int i = 0;
-      int end = key.size();
-      while (t != nullptr && i != end) {
-        auto it = t->next.find(key[i]);
-        if (it == t->next.end()) break;
-        t = it->second;
-        i += 1;
-      }
-      if (i == end) return t;
-      return nullptr;
-    }
-
-  public:
-    bool has_key(std::string &key) {
-      auto t = this->find(key);
-      return t != nullptr && t->word;
-    }
-
-    V& at(std::string &key) {
-      auto t = this->find(key);
-      if (t == nullptr || !t->word) throw std::out_of_range("No such key");
-      return t->v;
-    }
-
-    V& operator[] (std::string key) {
-      auto t = head;
-      int i = 0;
-      int end = key.size();
-      while(i != end) {
-        char c = key[i];
-        if (t->next.find(c) == t->next.end()) t->next[c] = new trie_dict<V>();
-        t = t->next[c];
-        i += 1;
-      }
-      t->word = true;
-      return t->v;
-    }
-
-    iterator begin() {
-      return iterator(this);
-    }
-    iterator end() {
-      return _end_iterator;
-    }
+    node_ptr find_node(key_const_ref k);
+    node_ptr push_node(key_const_ref k);
 };
 
-template <typename V>
-_Trie_dict_iterator<V> trie_dict<V>::_end_iterator;
+#define TRIE_T_DEC template<typename K, typename V>
+#define TRIE_C_DEC trie_dict<K,V>
+#define TRIE_C typename trie_dict<K, V>
 
-template <typename V>
-struct _Trie_dict_iterator {
-  typedef _Trie_dict_iterator<V> _Self;
-  typedef trie_dict_node<V> _Node;
-  typedef V   value_type;
-  typedef V&  reference;
-  typedef const V&  const_reference;
+TRIE_T_DEC
+int TRIE_C_DEC::size() { return this->count; }
 
-  std::stack<_Node*> _nodes;
-  std::stack<int> _len;
-  std::string _s;
-  int n;
+TRIE_T_DEC
+TRIE_C::node_ptr TRIE_C_DEC::find_node(TRIE_C::key_const_ref k) {
+  TRIE_C::node_ptr t = this->root;
+  TRIE_C::char_iterator it = k.begin();
+  TRIE_C::char_const_iterator e_it = k.end();
+  while (root != nullptr && it != e_it) {
+    char_type c = *it;
+    auto next = t->next.find(c);
+    if (next == t->next.end()) return nullptr;
+    t = next->second;
+    ++it;
+  }
+  if (it != e_it) return nullptr;
+  return t;
+}
 
-  // creates pass-the-end iterator
-  _Trie_dict_iterator() : n(-1) {} 
-  _Trie_dict_iterator(_Node *root) {
-    n = -1;
-    if (root != nullptr) {
-      _nodes.push(root);
-      _len.push(0);
-      ++(*this);
+
+TRIE_T_DEC
+TRIE_C::node_ptr TRIE_C_DEC::push_node(TRIE_C::key_const_ref k) {
+  if (this->root == nullptr) this->root = new node;
+  TRIE_C::node_ptr t = this->root;
+  TRIE_C::char_iterator it = k.begin();
+  TRIE_C::char_const_iterator e_it = k.end();
+  int j = 0;
+  while (it != e_it) {
+    TRIE_C_DEC::char_type c = *it;
+    auto next = t->next.find(c);
+    if (next == t->next.end()) {
+      auto next_t = new node(t);
+      t->next[c] = next_t;
+      t = next_t;
+    } else {
+      t = next->second;
     }
+    ++it;
   }
+  assert(t != nullptr);
+  return t;
+}
 
-  bool operator== (const _Self& that) {
-    return
-      this->n == that.n
-      || (this->_nodes.size() == 0 && that.n==-1)
-      || (this->n == -1 && that._nodes.size() == 0);
-  }
-  bool operator!= (const _Self& that) {
-    return !(*this == that);
-  }
+TRIE_T_DEC
+bool TRIE_C_DEC::has(TRIE_C_DEC::key_const_ref k) {
+  TRIE_C_DEC::node_ptr p = this->find_node(k);
+  return (p != nullptr && p->word);
+}
 
-  _Self& operator++ () {
-    assert(_nodes.size() > 0);
-    auto old = _nodes.top();
-    while (_nodes.size() > 0 && (!_nodes.top()->word || _nodes.top() == old)) {
-      auto t = _nodes.top();
-      int len = _len.top();
-      _nodes.pop();
-      _len.pop();
-      for (auto it = t->next.rbegin(); it != t->next.rend(); ++it) {
-        _nodes.push(it->second);
-        _len.push(len+1);
-      }
-    }
-    if (_nodes.size() > 0 && _nodes.top()->word) {
-      ++n;
-      int len = _len.top();
-//      while(_s.size() != )
-    }
-    return *this;
-  }
+TRIE_T_DEC
+V& TRIE_C_DEC::at(TRIE_C_DEC::key_const_ref k) {
+  TRIE_C::node_ptr p = this->find_node(k);
+  if (p == nullptr || !p->word) throw std::out_of_range("no such key");
+  return p->v;
+}
 
-  std::pair<std::string, const_reference> operator* () {
-    return _nodes.top()->v;
-  }
-};
+TRIE_T_DEC
+void TRIE_C_DEC::put(TRIE_C::key_const_ref k, V v) {
+  TRIE_C::node_ptr p = this->push_node(k);
+  if (!p->word) ++this->count;
+  p->word = true;
+  p->v = v;
+}
 
+TRIE_T_DEC
+TRIE_C::val_const_ref TRIE_C_DEC::operator[] (TRIE_C::key_const_ref k) const {
+  TRIE_C::node_ptr p = this->push_node(k);
+  return p->v;
+}
+
+TRIE_T_DEC
+TRIE_C::val_ref TRIE_C_DEC::operator[] (TRIE_C::key_const_ref k) {
+  TRIE_C::node_ptr p = this->push_node(k);
+  if (!p->word) ++this->count;
+  p->word = true;
+  return p->v;
+}
+
+#undef TRIE_T_DEC
+#undef TRIE_C_DEC
 #endif
