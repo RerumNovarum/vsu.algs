@@ -44,6 +44,9 @@ class trie_dict {
 
     typedef _trie_dict_node<K,V> node;
     typedef node*                node_ptr;
+
+    class iterator;
+    class const_iterator;
     
     int size();
     bool has(key_const_ref k);
@@ -52,6 +55,9 @@ class trie_dict {
 
     val_const_ref operator[](key_const_ref k) const;
     val_ref       operator[](key_const_ref k);
+
+    iterator begin();
+    const_iterator end();
 
   private:
     int count;
@@ -143,6 +149,42 @@ TRIE_C::val_ref TRIE_C_DEC::operator[] (TRIE_C::key_const_ref k) {
   return p->v;
 }
 
+TRIE_T_DEC
+struct TRIE_C_DEC::iterator {
+  TRIE_C::node_ptr current_node;
+  K key;
+
+  // (this->current_node == nullptr) \iff (*this == end)
+  iterator(TRIE_C::node_ptr root = nullptr) : current_node(root) {}
+
+  std::pair<K, V> operator*() {
+    return std::make_pair<K, V>(key, current_node->v);
+  }
+  
+  TRIE_C::iterator& operator++() {
+    TRIE_C::node_ptr t = current_node;
+    if (t == nullptr) throw std::out_of_range("underflow while iterating");
+    if (key.begin() == key.end()) {
+      t = t->next.begin()->second;
+    } else {
+      do {
+        TRIE_C::char_type c = key.back;
+        auto succ = t->next.upper_bound(c);
+        if (succ == t->next.end()) {
+          t = t->prev; 
+          key.pop_back();
+        } else {
+          t = succ->second;
+          key.push_back(succ->first);
+          if (t->word) break;
+        }
+      } while(t != nullptr);
+    }
+    current_node = t;
+  }
+};
+
 #undef TRIE_T_DEC
 #undef TRIE_C_DEC
+#undef TRIE_C
 #endif
