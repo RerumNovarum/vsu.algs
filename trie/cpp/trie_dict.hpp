@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <map>
+#include <algorithm>
 
 #define TRIE_DEC \
   template< \
@@ -14,7 +15,7 @@ struct null_type {};
 
 TRIE_DEC
 struct _trie_dict_node {
-  typedef std::iterator_traits<typename K::iterator> atraits;
+  typedef std::iterator_traits<typename K::const_iterator> atraits;
   typedef typename atraits::value_type char_type;
   typedef _trie_dict_node<K,V>*     node_ptr;
 
@@ -32,7 +33,7 @@ struct _trie_dict_node {
 TRIE_DEC
 class trie_dict {
   public:
-    typedef std::iterator_traits<typename K::iterator> atraits;
+    typedef std::iterator_traits<typename K::const_iterator> atraits;
     typedef typename atraits::value_type char_type;
     typedef typename K::iterator   char_iterator;
     typedef typename K::const_iterator char_const_iterator;
@@ -45,9 +46,9 @@ class trie_dict {
     typedef _trie_dict_node<K,V> node;
     typedef node*                node_ptr;
 
-    class iterator;
     class const_iterator;
     
+    trie_dict() : root(nullptr), count(0) {}
     int size();
     bool has(key_const_ref k);
     void put(key_const_ref k, V v);
@@ -56,12 +57,13 @@ class trie_dict {
     val_const_ref operator[](key_const_ref k) const;
     val_ref       operator[](key_const_ref k);
 
-    iterator begin();
+    const_iterator begin();
     const_iterator end();
 
   private:
     int count;
-    node_ptr root = nullptr;
+    const_iterator _end;
+    node_ptr root;
 
     node_ptr find_node(key_const_ref k);
     node_ptr push_node(key_const_ref k);
@@ -97,7 +99,6 @@ TRIE_C::node_ptr TRIE_C_DEC::push_node(TRIE_C::key_const_ref k) {
   TRIE_C::node_ptr t = this->root;
   TRIE_C::char_iterator it = k.begin();
   TRIE_C::char_const_iterator e_it = k.end();
-  int j = 0;
   while (it != e_it) {
     TRIE_C_DEC::char_type c = *it;
     auto next = t->next.find(c);
@@ -150,39 +151,82 @@ TRIE_C::val_ref TRIE_C_DEC::operator[] (TRIE_C::key_const_ref k) {
 }
 
 TRIE_T_DEC
-struct TRIE_C_DEC::iterator {
+struct TRIE_C_DEC::const_iterator {
+  typedef std::pair<K, V> value_type;
   TRIE_C::node_ptr current_node;
   K key;
+  int el_num;
 
   // (this->current_node == nullptr) \iff (*this == end)
-  iterator(TRIE_C::node_ptr root = nullptr) : current_node(root) {}
+  const_iterator(TRIE_C::node_ptr root = nullptr) {
+    this->el_num = -1;
+    current_node = root;
+  }
 
-  std::pair<K, V> operator*() {
-    return std::make_pair<K, V>(key, current_node->v);
+  bool operator==(const const_iterator& rhs) const {
+    return this->current_node == rhs.current_node;
+  }
+  bool operator!=(const const_iterator& rhs) const {
+    return this->current_node != rhs.current_node;
+  }
+  value_type operator*() {
+    if (this->current_node == nullptr) throw std::out_of_range("underflow while dereferencing iterator");
+    if (el_num == -1) ++(*this);
+    return std::make_pair(key, current_node->v);
   }
   
-  TRIE_C::iterator& operator++() {
+  TRIE_C::const_iterator& operator++() {
+    ++el_num;
     TRIE_C::node_ptr t = current_node;
-    if (t == nullptr) throw std::out_of_range("underflow while iterating");
-    if (key.begin() == key.end()) {
-      t = t->next.begin()->second;
-    } else {
+    if (t == nullptr && el_num != 0) throw std::out_of_range("underflow while iterating");
+
+    if (t != nullptr) {
+      if (key.begin() == key.end()) {
+        auto n = t->next.begin();
+        key.push_back(n->first);
+        t = n->second;
+        if (t->word) {
+          current_node = t;
+          return *this;
+        }
+      }
+      bool down = true;
       do {
-        TRIE_C::char_type c = key.back;
-        auto succ = t->next.upper_bound(c);
-        if (succ == t->next.end()) {
-          t = t->prev; 
-          key.pop_back();
+        typename std::map<TRIE_C::char_type, TRIE_C::node_ptr>::iterator next;
+        if (down) {
+          next = t->next.begin();
         } else {
-          t = succ->second;
-          key.push_back(succ->first);
-          if (t->word) break;
+          t = t->prev;
+          if (t == nullptr) break;
+          TRIE_C::char_type c = key.back();
+          next = t->next.upper_bound(c);
+          key.pop_back();
+        }
+        if (next == t->next.end()) {
+          down = false;
+        } else {
+          t = next->second;
+          key.push_back(next->first);
+          down = true;
+          if (t->word) {
+            break;
+          }
         }
       } while(t != nullptr);
     }
     current_node = t;
+    return *this;
   }
 };
+
+TRIE_T_DEC
+TRIE_C::const_iterator TRIE_C_DEC::begin() {
+  return TRIE_C::const_iterator(this->root);
+}
+TRIE_T_DEC
+TRIE_C::const_iterator TRIE_C_DEC::end() {
+  return this->_end;
+}
 
 #undef TRIE_T_DEC
 #undef TRIE_C_DEC
