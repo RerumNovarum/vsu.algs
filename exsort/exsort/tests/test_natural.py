@@ -1,16 +1,13 @@
 import unittest
 import tempfile
-import time
-import sys
 import os
-# sys.path.insert(0, '..')
 
-from exsort import natural, exsortio as io
+from exsort import natural
 
-from exsort.task10 import Student
 from exsort.task10 import StudentReader as sr
 from exsort.task10 import StudentWriter as sw
-from exsort.tests.task10 import naturalsortfile as sortfile, test_sort, is_sorted, gen
+from exsort.tests.task10 import naturalsortfile as sortfile, test_sort
+
 
 def lines2temp(lines):
     f = tempfile.NamedTemporaryFile(delete=False)
@@ -19,11 +16,12 @@ def lines2temp(lines):
     f.close()
     return name
 
+
 class NaturalTest(unittest.TestCase):
     def test_merging(self):
         run1src = ['A 1', 'B 3', 'C 33', 'E 117']
         run2src = ['Y 0', 'V 313', 'W 331', 'X 379']
-        expected = ['Y 0', 'A 1', 'B 3', 'C 33',\
+        expected = ['Y 0', 'A 1', 'B 3', 'C 33',
                     'E 117', 'V 313', 'W 331', 'X 379']
         run1 = lines2temp(run1src)
         run2 = lines2temp(run2src)
@@ -37,9 +35,11 @@ class NaturalTest(unittest.TestCase):
                     self.assertEqual(line, r.readline().strip())
                 self.assertEqual(r.readline(), '')
         finally:
-            for f in [o, w, sr1, sr2]: f.close()
+            for f in [o, w, sr1, sr2]:
+                f.close()
             os.remove(run1)
             os.remove(run2)
+
     def test_sorting_small(self):
         f = tempfile.NamedTemporaryFile()
         o = tempfile.NamedTemporaryFile()
@@ -54,14 +54,17 @@ class NaturalTest(unittest.TestCase):
             with open(o.name, mode='r', encoding='utf8') as result:
                 for e in expected:
                     r = result.readline().rstrip()
-                    print('[I] expected=%s output=%s'%(repr(e), repr(r)))
+                    print('[I] expected=%s output=%s' % (repr(e), repr(r)))
                     self.assertTrue(r == e)
                 self.assertTrue(not result.readline())
         finally:
             o.close()
             f.close()
+
     def test_random(self):
         for i in range(8, 16):
             self.assertTrue(test_sort(sortfile, n=2**i))
+
+
 if __name__ == '__main__':
     unittest.main()
