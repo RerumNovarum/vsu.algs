@@ -163,11 +163,12 @@ vector<ln<T> >* min_cover(const vector<pt<T> > &in_pts) {
   {
     vector<pt<T> > aux(in_pts);
     sort(aux.begin(), aux.end());
-    int uniq_no = 0;
+    int uniq_no = 1;
     for (auto it = aux.begin() + 1; it != aux.end(); ++it)
       if (*it != *(it-1))
         ++uniq_no;
     uniq.reserve(uniq_no);
+    uniq.push_back(*in_pts.begin());
     for (auto it = aux.begin() + 1; it != aux.end(); ++it)
       if (*it != *(it-1))
         uniq.push_back(*it);
