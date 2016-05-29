@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
 project (hashmap)
 set(CMAKE_CXX_STANDARD 11)
-#add_executable(unique_words unique_words.cpp)
+add_executable(unique_words unique_words.cpp)
 add_executable(word_counter word_counter.cpp)
